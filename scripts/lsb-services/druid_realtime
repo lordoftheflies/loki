@@ -15,6 +15,7 @@ NODE_MEMORY=256
 NODE_TIMEZONE=UTC
 NODE_ENCODING=UTF-8
 NODE_TYPE=realtime
+NODE_SPECFILE_LOCATION=examples/wikipedia/wikipedia_realtime.spec
 
 #################################################################################
 # Fill/change the following vars
@@ -25,7 +26,7 @@ DESC="Boot service for Druid realtime node."              # String describing th
 NAME="druid_realtime"                     # Name of the service, will be used in another vars
 DAEMON="/usr/bin/java"			      # Path to the service executable, e.g. /usr/bin/java
 
-DAEMON_ARGS="-Xmx${NODE_MEMORY}m -Duser.timezone=${NODE_TIMEZONE} -Dfile.encoding=${NODE_ENCODING} -Ddruid.realtime.specFile=examples/wikipedia/wikipedia_realtime.spec -classpath config/_common:config/${NODE_TYPE}:lib/* io.druid.cli.Main server ${NODE_TYPE}"	# Arguments passed to the service startup
+DAEMON_ARGS="-Xmx${NODE_MEMORY}m -Duser.timezone=${NODE_TIMEZONE} -Dfile.encoding=${NODE_ENCODING} -Ddruid.realtime.specFile=${NODE_SPECFILE_LOCATION} -classpath config/_common:config/${NODE_TYPE}:lib/* io.druid.cli.Main server ${NODE_TYPE}"	# Arguments passed to the service startup
 
 WORK_DIR="/opt/druid"               # Working directory where the service will be started, defaults to /var/lib/${NAME}
 USER=druid                                # User that will spawn the process, defaults to the service name
