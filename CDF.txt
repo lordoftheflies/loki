@@ -1,0 +1,112 @@
+CDF data format¶
+
+Introduction
+When a sensor in the sensor network samples the value of a measured variable many times over a given time period at approximately uniform intervals, and in general the number of samples makes the exhaustive transmission and storage of these samples prohibitive (vis-a-vis the cost of such transmission and their probative value,) an aggregate statistic, as represented here shall summarize (i.e. stand in place of) the samples collected. This is the CDF data format.
+
+This data format is therefore a method for communicating specifics of the distribution of the samples, however the format does not prescribe or impose a method for determining
+
+how large a representation and how much detail adequately describes a number of samples
+how these specifics are to be chosen to be as informative as possible.
+These specifics can only come from detailed knowledge of the individual sensors.
+
+For purposes of further analysis, sensor data must be accompanied by other pieces of information, such as: the time period when the data was collected, the type of the sensor, etc. The CDF format does not describe this, instead only representing the sampled data, therefore in any practical usage used as part of an object that contains this metadata.
+
+In the following we shall first describe the format in an abstract manner, then its JSON representation, and finally provide examples of usage.
+
+The abstract format
+The CDF of a random variable
+The CDF (Cumulative Distribution Function) of a random variable X is the function F(x) = P( X < x ). That is: the CDF describes the probability that the random variable is strictly less than the argument.
+
+The CDF of samples data can be analogously defined, having n samples and the samples being x_0, x_1, ..., x_(n-1): F(x) = | { x_i < x } | / n.
+
+The definition of the format
+The distribution of the sample collected by the sensor may be represented by constructing the CDF of the collected samples, and specifying this. This in turn can be done by specifying the CDF at certain control points. (The choice of control points is explicitly left as an implementation detail.) A practical format may be constructed if we specify:
+
+a normalizing constant n
+k number of control points (x_0, n * F(x_0)), (x_1, n * F(x_1)), ... , (x_(k-1), n * F(x_(k-1)))
+Note: it is encouraged that when n sensor readings are available, then that n should be the normalizing constant. During data processing, the CDF may need to be normalized; it is encouraged to then set n = 1.0
+
+The JSON format
+The formulas out of the way let us specify the JSON format for this data:
+
+{
+    "n": n,
+    "x": [ x_0, x_1, ..., x_(k-1) ],
+    "F": [ n * F(x_0), n * F(x_1), ..., n * F(x_(k-1)) ]
+}
+As a special case, the JSON object may omit F, in which case F is assumed to be the array ( 0 * n / L, 1 * n / L, ..., ( L - 1 ) * n / L ), where L is the length of x.
+
+Examples
+In this section some - hopefully useful - examples are given.
+
+Committing a full record into CDF
+In this example a sensor collected 10 data points, however during the design phase it was determined that at least 20 CDF control points should be used to describe this data. In this case (although by some method of interpolation the 20 data points can surely be generated) the approach suggested here is to commit the full record - and no more.
+
+The collected data points - in order of collection - are the following:
+
+7.9 9.1 8.5 6.3 7.3 7.0 8.3 5.5 7.9 8.6
+For efficient transmission, the software should sort the data in ascending order:
+
+5.5 6.3 7.0 7.3 7.9 7.9 8.3 8.5 8.6 9.1
+The packed representation is thus readily available:
+
+{
+    "n": 10,
+    "x": [ 5.5, 6.3, 7.0, 7.3, 7.9, 7.9, 8.3, 8.5, 8.6, 9.1 ]
+}
+Committing a histogram into CDF
+On the same morning as our first sensor, another one is much more industrious, and has collected many more data points. This sensor internally represents the data points it has collected as a histogram. After meticulous tallying, the following histogram is ready to be sent:
+
+Bucket	no. of pts.
+5.0 - 15.0	20
+15.0 - 25.0	42
+25.0 - 35.0	11
+35.0 - 45.0	33
+45.0 - 55.0	8
+In the CDF representation we choose as control points the histogram bucket boundaries, and the representation is again evident.
+
+{
+    "n": 114,
+    "x": [ 5.0, 15.0, 25.0, 35.0, 45.0, 55.0 ],
+    "F": [ 0,   20,   62,   73,   106,  114 ]
+}
+Committing a record using quartiles (or more generally percentiles)
+In this example we wish to commit only the lower quartile, the median and the upper quartile.
+
+The collected data points - in order of collection - are the following:
+
+7.9 9.1 8.5 6.3 7.3 7.0 8.3 5.5 7.9 8.6
+For transmission, the software should sort the data in ascending order:
+
+5.5 6.3 7.0 7.3 7.9 7.9 8.3 8.5 8.6 9.1
+Here we have a choice to make. For a 10-element set it is not trivial to extract either of these quantities. Instead of choosing as my example a record of 9 elements, let us explore the two paths one might take.
+
+Using only integral indices
+In this case we commit the element indices (2, 4, 7), yielding the following representation:
+
+{
+    "n": 10,
+    "x": [ 7.0, 7.9, 8.5 ],
+    "F": [ 2,   4,   7 ]
+}
+Using the average of the two neighboring elements
+In this case we commit the generally non-integral element indices (2, 4.5, 7), yielding the following representation:
+
+{
+    "n": 10,
+    "x": [ 7.0, 7.9, 8.5 ],
+    "F": [ 2,   4.5, 7 ]
+}
+Statistical merit
+In a pathological case - such as proposed above - it is clear that only the latter approach is permissible. However users are encouraged to use the percentile-type description for sets of at least 100 data points, where this issue becomes moot.
+
+Adding a minimum/maximum to the previous example
+One might wonder whether additionally to a histogram-style or percentile-style description it may be wise to add data identifying the range. This can be represented in a CDF by adding the minimum and maximum of the data explicitly.
+
+The previous example with added minimum/maximum:
+
+{
+    "n": 10,
+    "x": [ 5.5, 7.0, 7.9, 8.5, 9.1 ],
+    "F": [ 0,   2,   4.5, 7,   10 ]
+}
